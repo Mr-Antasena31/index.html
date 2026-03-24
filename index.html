@@ -2,36 +2,35 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Cosmic Intelligence - Fix Click Interface</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Intelligence - Command Center</title>
     <style>
         :root {
             --neon-blue: #00f2ff;
             --space-black: #020617;
             --panel-glass: rgba(15, 23, 42, 0.95);
+            --modal-bg: rgba(5, 10, 20, 0.98);
         }
 
         body {
             margin: 0; background: var(--space-black); color: #e2e8f0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
             display: flex; height: 100vh; overflow: hidden;
         }
-<div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed var(--neon-blue); font-size: 0.85rem; color: #94a3b8;">
-    <p><em>Kodingan di atas adalah simulasi sistem orbital tingkat lanjut yang dikembangkan dengan fokus pada akurasi data dan performa visual.</em></p>
-    <p>Jika Anda tertarik untuk membangun platform edukasi atau visualisasi data yang lebih profesional, silakan hubungi saya:</p>
-    <a href="mailto:senkuadalahilmuan@gmail.com" style="color: var(--neon-blue); text-decoration: none; font-weight: bold;">📧 Kontak Saya</a>
-</div>
+
         /* Sidebar */
         .sidebar {
             width: 380px; background: var(--panel-glass);
             border-right: 2px solid var(--neon-blue);
-            padding: 40px; z-index: 1000; /* Pastikan di atas segalanya */
+            padding: 40px; z-index: 1000;
             backdrop-filter: blur(20px);
             box-shadow: 20px 0 50px rgba(0,0,0,0.9);
             overflow-y: auto;
-            transition: all 0.5s ease;
+            display: flex; flex-direction: column;
+            transition: 0.5s;
         }
 
-        .planet-name { font-size: 2.8rem; font-weight: 900; color: var(--neon-blue); margin: 0; text-transform: uppercase; }
+        .planet-name { font-size: 2.8rem; font-weight: 900; color: var(--neon-blue); margin: 0; text-transform: uppercase; letter-spacing: 2px; }
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; }
         .data-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 3px solid var(--neon-blue); }
         .label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; }
@@ -44,43 +43,109 @@
             background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
         }
 
-        /* Matahari */
         .sun-obj {
             width: 80px; height: 80px; 
             background: radial-gradient(circle, #fffa86, #f97316);
             border-radius: 50%; box-shadow: 0 0 60px #f97316; 
             cursor: pointer; z-index: 500;
-            position: relative;
         }
 
-        /* Orbit - Sekarang TRANSPARENT Klik (Pointer Events None) */
         .orbit {
             position: absolute; border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 50%; 
-            animation: rotate linear infinite;
-            pointer-events: none; /* AGAR TIDAK MENGHALANGI KLIK */
+            border-radius: 50%; animation: rotate linear infinite;
+            pointer-events: none;
         }
 
-        /* Planet - Sekarang BISA DIKLIK (Pointer Events Auto) */
         .planet-clickable {
-            position: absolute; 
-            top: 50%; left: 0;
+            position: absolute; top: 50%; left: 0;
             transform: translate(-50%, -50%);
-            border-radius: 50%;
-            cursor: pointer;
-            pointer-events: auto; /* MENGAKTIFKAN KLIK KEMBALI */
-            transition: transform 0.3s, box-shadow 0.3s;
-            z-index: 600;
+            border-radius: 50%; cursor: pointer;
+            pointer-events: auto; z-index: 600;
+            transition: 0.3s ease-out;
         }
 
-        .planet-clickable:hover {
-            transform: translate(-50%, -50%) scale(1.5);
-            box-shadow: 0 0 20px white;
-        }
+        .planet-clickable:hover { transform: translate(-50%, -50%) scale(1.6); box-shadow: 0 0 30px white; }
 
         @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .star { position: absolute; background: white; border-radius: 50%; z-index: 1; animation: twinkle 3s infinite; }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
-        .star { position: absolute; background: white; border-radius: 50%; z-index: 1; }
+        /* Bagian Kontak & Tombol Glow */
+        .contact-box {
+            margin-top: auto; padding-top: 20px; 
+            border-top: 1px dashed rgba(0,242,255,0.3); 
+            font-size: 0.85rem; color: #94a3b8;
+        }
+
+        .glow-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            border-radius: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+
+        .glow-btn:hover {
+            background: var(--neon-blue);
+            color: var(--space-black);
+            box-shadow: 0 0 20px var(--neon-blue), 0 0 40px rgba(0, 242, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* Styling Pop-up Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000; display: none; /* Sembunyi secara default */
+            justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+
+        .modal-overlay.open { display: flex; opacity: 1; }
+
+        .modal-content {
+            background: var(--modal-bg);
+            width: 500px;
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid var(--neon-blue);
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.4);
+            position: relative;
+            transform: scale(0.7); transition: transform 0.4s ease;
+            text-align: center;
+        }
+
+        .modal-overlay.open .modal-content { transform: scale(1); }
+
+        .close-modal {
+            position: absolute; top: 15px; right: 20px;
+            font-size: 1.5rem; color: #94a3b8;
+            cursor: pointer; transition: 0.3s;
+        }
+        .close-modal:hover { color: white; transform: rotate(90deg); }
+
+        .modal-title { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 2px; margin-top: 0; }
+        
+        /* Form Sederhana di Pop-up */
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
+        .form-input {
+            width: 100%; padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #333; border-radius: 5px;
+            color: white; font-family: inherit;
+        }
+        .form-input:focus { outline: none; border-color: var(--neon-blue); }
+
     </style>
 </head>
 <body>
@@ -89,14 +154,43 @@
         <div id="display">
             <h1 class="planet-name">SOLARIS</h1>
             <p style="color: var(--neon-blue)">Pusat Komando Astronomi</p>
-            <hr border="1" style="border-color: rgba(0,242,255,0.2)">
-            <p id="description" style="line-height: 1.6;">Selamat datang, Komandan. Klik pada objek angkasa di layar kanan untuk memulai pemindaian data mendalam tiap planet.</p>
+            <hr style="border: 0; border-top: 1px solid rgba(0,242,255,0.2); margin: 20px 0;">
+            <p id="description">Selamat datang, Komandan. Klik pada objek angkasa di layar kanan untuk memindai data mendalam.</p>
+        </div>
+        
+        <div class="contact-box">
+            <p><em>Kodingan di atas adalah simulasi tingkat lanjut yang dikembangkan dengan fokus pada performa visual.</em></p>
+            <button class="glow-btn" onclick="openModal()">Hubungi Developer</button>
         </div>
     </aside>
 
     <main class="viewport" id="space">
         <div class="sun-obj" onclick="loadPlanet('sun')"></div>
     </main>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 class="modal-title">Inisiasi Proyek</h2>
+            <p style="color: #cbd5e1; margin-bottom: 25px;">Tertarik membangun visualisasi data atau platform edukasi profesional? Mari bicarakan ide Anda.</p>
+            
+            <form>
+                <div class="form-group">
+                    <label>Nama / Organisasi</label>
+                    <input type="text" class="form-input" placeholder="Masukkan nama Anda">
+                </div>
+                <div class="form-group">
+                    <label>Pesan Singkat</label>
+                    <textarea class="form-input" rows="4" placeholder="Deskripsikan ide proyek Anda..."></textarea>
+                </div>
+                <button type="submit" class="glow-btn" style="width: 100%;">Kirim Pesan</button>
+            </form>
+            
+            <div style="margin-top: 25px; font-size: 0.8rem;">
+                Atau email langsung ke: <a href="mailto:senkuadalahilmuan@gmail.com" style="color: var(--neon-blue); text-decoration: none;">senkuadalahilmuan@gmail.com</a>
+            </div>
+        </div>
+    </div>
 
     <script>
         const db = {
@@ -126,31 +220,21 @@
 
         function init() {
             const space = document.getElementById('space');
-            
             planets.forEach(p => {
                 const orbit = document.createElement('div');
                 orbit.className = 'orbit';
                 orbit.style.width = p.dist + 'px';
                 orbit.style.height = p.dist + 'px';
                 orbit.style.animationDuration = p.speed + 's';
-                
                 const planet = document.createElement('div');
                 planet.className = 'planet-clickable';
                 planet.style.width = p.size + 'px';
                 planet.style.height = p.size + 'px';
                 planet.style.backgroundColor = p.color;
-                
-                // Event klik langsung pada elemen planet
-                planet.onclick = (e) => {
-                    e.stopPropagation(); // Mencegah konflik klik
-                    loadPlanet(p.id);
-                };
-                
+                planet.onclick = (e) => { e.stopPropagation(); loadPlanet(p.id); };
                 orbit.appendChild(planet);
                 space.appendChild(orbit);
             });
-
-            // Taburan Bintang
             for(let i=0; i<150; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
@@ -158,6 +242,7 @@
                 star.style.height = star.style.width;
                 star.style.left = Math.random() * 100 + '%';
                 star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
                 document.body.appendChild(star);
             }
         }
@@ -165,11 +250,8 @@
         function loadPlanet(id) {
             const data = db[id];
             const display = document.getElementById('display');
-            
-            // Efek transisi halus
             display.style.opacity = 0;
             display.style.transform = "translateX(-20px)";
-            
             setTimeout(() => {
                 display.innerHTML = `
                     <h1 class="planet-name">${data.name}</h1>
@@ -187,6 +269,24 @@
                 display.style.transform = "translateX(0)";
             }, 300);
         }
+
+        // Fungsi JavaScript untuk Modal
+        const overlay = document.getElementById('modalOverlay');
+
+        function openModal() {
+            overlay.classList.add('open');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+        }
+
+        // Menutup modal jika ESC ditekan
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.classList.contains('open')) {
+                closeModal();
+            }
+        });
 
         init();
     </script>
