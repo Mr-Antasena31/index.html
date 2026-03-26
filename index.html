@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cosmic Intelligence - Command Center</title>
+    <title>Cosmic Intelligence - Mega Database Edition</title>
     <style>
         :root {
             --neon-blue: #00f2ff;
+            --neon-red: #ff3366;
+            --neon-yellow: #fbbf24;
             --space-black: #020617;
-            --panel-glass: rgba(15, 23, 42, 0.95);
-            --modal-bg: rgba(5, 10, 20, 0.98);
+            --panel-glass: rgba(10, 15, 30, 0.85);
+            --hud-color: rgba(0, 242, 255, 0.6);
         }
+
+        * { box-sizing: border-box; user-select: none; }
 
         body {
             margin: 0; background: var(--space-black); color: #e2e8f0;
@@ -18,277 +22,635 @@
             display: flex; height: 100vh; overflow: hidden;
         }
 
-        /* Sidebar */
+        /* HUD & UI Overlays */
+        .hud-overlay { pointer-events: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; box-shadow: inset 0 0 100px rgba(0,242,255,0.05); }
+        .hud-corners { position: absolute; width: 30px; height: 30px; border: 2px solid var(--hud-color); }
+        .hud-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+        .hud-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+        .hud-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+        .hud-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+        /* Sidebar Styling - Scrollable */
         .sidebar {
-            width: 380px; background: var(--panel-glass);
-            border-right: 2px solid var(--neon-blue);
-            padding: 40px; z-index: 1000;
-            backdrop-filter: blur(20px);
-            box-shadow: 20px 0 50px rgba(0,0,0,0.9);
-            overflow-y: auto;
-            display: flex; flex-direction: column;
-            transition: 0.5s;
+            width: 480px; background: var(--panel-glass);
+            border-right: 1px solid rgba(0, 242, 255, 0.3);
+            padding: 30px; z-index: 1000;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            box-shadow: 15px 0 50px rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; position: relative;
+            overflow-y: auto; overflow-x: hidden;
         }
 
-        .planet-name { font-size: 2.8rem; font-weight: 900; color: var(--neon-blue); margin: 0; text-transform: uppercase; letter-spacing: 2px; }
-        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; }
-        .data-card { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 3px solid var(--neon-blue); }
-        .label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; }
-        .value { font-size: 1rem; font-weight: 600; color: white; }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--neon-blue); border-radius: 10px; }
 
-        /* Viewport */
-        .viewport { 
-            flex-grow: 1; position: relative; 
-            display: flex; justify-content: center; align-items: center; 
-            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-        }
+        .sys-status { font-family: monospace; color: #4ade80; font-size: 0.75rem; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; position: sticky; top: 0; background: var(--panel-glass); padding-bottom: 10px; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sys-status.alert { color: var(--neon-red); }
 
-        .sun-obj {
-            width: 80px; height: 80px; 
-            background: radial-gradient(circle, #fffa86, #f97316);
-            border-radius: 50%; box-shadow: 0 0 60px #f97316; 
-            cursor: pointer; z-index: 500;
-        }
-
-        .orbit {
-            position: absolute; border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 50%; animation: rotate linear infinite;
-            pointer-events: none;
-        }
-
-        .planet-clickable {
-            position: absolute; top: 50%; left: 0;
-            transform: translate(-50%, -50%);
-            border-radius: 50%; cursor: pointer;
-            pointer-events: auto; z-index: 600;
-            transition: 0.3s ease-out;
-        }
-
-        .planet-clickable:hover { transform: translate(-50%, -50%) scale(1.6); box-shadow: 0 0 30px white; }
-
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .star { position: absolute; background: white; border-radius: 50%; z-index: 1; animation: twinkle 3s infinite; }
-        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-
-        /* Bagian Kontak & Tombol Glow */
-        .contact-box {
-            margin-top: auto; padding-top: 20px; 
-            border-top: 1px dashed rgba(0,242,255,0.3); 
-            font-size: 0.85rem; color: #94a3b8;
-        }
-
-        .glow-btn {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 10px 20px;
-            background: transparent;
-            color: var(--neon-blue);
-            border: 2px solid var(--neon-blue);
-            border-radius: 5px;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
-        }
-
-        .glow-btn:hover {
-            background: var(--neon-blue);
-            color: var(--space-black);
-            box-shadow: 0 0 20px var(--neon-blue), 0 0 40px rgba(0, 242, 255, 0.6);
-            transform: translateY(-2px);
-        }
-
-        /* Styling Pop-up Modal */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-            z-index: 2000; display: none; /* Sembunyi secara default */
-            justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.4s ease;
-        }
-
-        .modal-overlay.open { display: flex; opacity: 1; }
-
-        .modal-content {
-            background: var(--modal-bg);
-            width: 500px;
-            padding: 40px;
-            border-radius: 15px;
-            border: 2px solid var(--neon-blue);
-            box-shadow: 0 0 50px rgba(0, 242, 255, 0.4);
-            position: relative;
-            transform: scale(0.7); transition: transform 0.4s ease;
-            text-align: center;
-        }
-
-        .modal-overlay.open .modal-content { transform: scale(1); }
-
-        .close-modal {
-            position: absolute; top: 15px; right: 20px;
-            font-size: 1.5rem; color: #94a3b8;
-            cursor: pointer; transition: 0.3s;
-        }
-        .close-modal:hover { color: white; transform: rotate(90deg); }
-
-        .modal-title { color: var(--neon-blue); text-transform: uppercase; letter-spacing: 2px; margin-top: 0; }
+        .planet-name { font-size: 2.8rem; font-weight: 900; color: var(--neon-blue); margin: 15px 0 5px 0; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 20px rgba(0,242,255,0.4); }
+        .planet-type { color: var(--neon-yellow); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 25px; }
         
-        /* Form Sederhana di Pop-up */
-        .form-group { margin-bottom: 15px; text-align: left; }
-        .form-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px; }
-        .form-input {
-            width: 100%; padding: 10px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid #333; border-radius: 5px;
-            color: white; font-family: inherit;
+        /* Educational Data Display */
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .data-card { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px; border-left: 3px solid var(--neon-blue); transition: 0.3s; }
+        .data-card:hover { background: rgba(255,255,255,0.08); transform: translateX(5px); }
+        .data-card.full-width { grid-column: span 2; border-left-color: var(--neon-yellow); }
+        
+        .label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; letter-spacing: 1px; }
+        .value { font-size: 0.95rem; font-weight: 600; color: white; }
+        
+        /* Typography for Long Texts */
+        .info-section { margin-top: 20px; border-top: 1px dashed rgba(0, 242, 255, 0.2); padding-top: 15px; }
+        .info-section h3 { color: var(--neon-blue); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0; }
+        .desc-text { line-height: 1.7; font-size: 0.9rem; color: #cbd5e1; text-align: justify; margin-bottom: 15px; }
+        
+        .fact-box { background: rgba(0,242,255,0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--neon-blue); margin-top: 20px; }
+        .fact-box strong { color: var(--neon-blue); display: block; margin-bottom: 5px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+
+        /* Misi Eksplorasi Box */
+        .mission-box { background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--neon-yellow); margin-top: 15px; margin-bottom: 20px; }
+        .mission-box strong { color: var(--neon-yellow); display: block; margin-bottom: 12px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+        .mission-badge { display: inline-block; background: var(--neon-yellow); color: #000; padding: 6px 12px; border-radius: 15px; font-size: 0.75rem; font-weight: bold; margin-right: 8px; margin-bottom: 8px; box-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+
+        /* Top Controls */
+        .top-controls {
+            position: absolute; top: 20px; right: 40px; z-index: 1000;
+            display: flex; gap: 10px; background: var(--panel-glass);
+            padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(0,242,255,0.2);
+            backdrop-filter: blur(10px);
         }
-        .form-input:focus { outline: none; border-color: var(--neon-blue); }
+        
+        .btn-action {
+            background: rgba(0,242,255,0.05); color: var(--neon-blue);
+            border: 1px solid var(--neon-blue); padding: 8px 15px;
+            border-radius: 4px; font-weight: bold; font-size: 0.75rem;
+            cursor: pointer; text-transform: uppercase; transition: 0.3s; letter-spacing: 1px;
+        }
+        .btn-action:hover, .btn-action.active { background: var(--neon-blue); color: #000; box-shadow: 0 0 15px var(--neon-blue); }
+        .btn-danger { border-color: var(--neon-red); color: var(--neon-red); }
+        .btn-danger:hover { background: var(--neon-red); color: white; box-shadow: 0 0 15px var(--neon-red); }
+        .btn-time.warp { background: var(--neon-yellow); border-color: var(--neon-yellow); color: #000; box-shadow: 0 0 15px var(--neon-yellow); }
+
+        /* Viewport & Physics Engine Area */
+        .viewport { flex-grow: 1; position: relative; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; cursor: grab; }
+        .viewport:active { cursor: grabbing; }
+
+        /* Parallax Backgrounds */
+        .bg-layer { position: absolute; top: 50%; left: 50%; width: 300vw; height: 300vw; transform: translate(-50%, -50%); pointer-events: none; }
+        .bg-stars-1 { background: radial-gradient(2px 2px at 40px 60px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 20px 50px, rgba(255,255,255,0.8), rgba(0,0,0,0)), radial-gradient(2px 2px at 30px 100px, rgba(255,255,255,0.5), rgba(0,0,0,0)); background-size: 200px 200px; opacity: 0.5; }
+        .bg-stars-2 { background: radial-gradient(3px 3px at 100px 150px, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 50px 200px, rgba(255,255,255,0.8), rgba(0,0,0,0)); background-size: 300px 300px; opacity: 0.8; }
+
+        #universe { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
+
+        /* Celestial Objects */
+        .orbit-ring { position: absolute; border: 1px dashed rgba(255,255,255,0.1); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; transition: opacity 0.3s; }
+        .orbit-ring.hidden { opacity: 0 !important; }
+        .orbit-ring.active { border-color: var(--neon-blue); border-style: solid; box-shadow: 0 0 20px rgba(0,242,255,0.2) inset; opacity: 0.6; }
+        .orbit-ring.moon-orbit { border: 1px dotted rgba(255,255,255,0.2); }
+        .orbit-ring.comet-orbit { border-color: rgba(255,255,255,0.15); border-style: dotted; }
+
+        .body-wrapper { position: absolute; transform: translate(-50%, -50%); display: flex; justify-content: center; align-items: center; cursor: pointer; pointer-events: auto; }
+        
+        .body-visual {
+            border-radius: 50%; background-size: cover; background-position: center;
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.8), 0 0 10px rgba(255,255,255,0.1);
+            transition: transform 0.2s, filter 0.2s; position: relative; z-index: 10;
+        }
+        
+        .body-wrapper:hover > .body-visual { transform: scale(1.4); filter: brightness(1.2); box-shadow: 0 0 20px white, inset -4px -4px 10px rgba(0,0,0,0.8); }
+        .body-wrapper.tracked > .body-visual { box-shadow: 0 0 30px var(--neon-blue), inset -4px -4px 10px rgba(0,0,0,0.8); border: 1px solid var(--neon-blue); }
+
+        .sun-visual { box-shadow: 0 0 80px #f97316, 0 0 150px rgba(249, 115, 22, 0.4), inset 0 0 20px #fff; animation: sunPulse 4s infinite alternate; }
+        @keyframes sunPulse { from { filter: brightness(1); } to { filter: brightness(1.2); } }
+
+        /* Cincin Saturnus */
+        .rings::before {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotateX(75deg);
+            width: 240%; height: 240%; border-radius: 50%;
+            border: 12px solid rgba(210, 180, 140, 0.4); border-top-color: transparent; border-bottom-color: rgba(210, 180, 140, 0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.8); pointer-events: none; z-index: -1;
+        }
+
+        /* Asteroid & Komet */
+        .asteroid { position: absolute; background: #94a3b8; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        .comet { background: #fff; box-shadow: -20px 0 20px rgba(0, 242, 255, 0.9); border-radius: 50%; }
+
+        .obj-label {
+            position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 4px 10px; font-size: 0.7rem; font-family: monospace;
+            border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); opacity: 0; pointer-events: none; transition: 0.3s; white-space: nowrap; z-index: 20;
+        }
+        .body-wrapper:hover > .obj-label, .body-wrapper.tracked > .obj-label { opacity: 1; border-color: var(--neon-blue); color: var(--neon-blue); top: -45px; }
 
     </style>
 </head>
 <body>
 
+    <div class="hud-overlay">
+        <div class="hud-corners hud-tl"></div><div class="hud-corners hud-tr"></div>
+        <div class="hud-corners hud-bl"></div><div class="hud-corners hud-br"></div>
+    </div>
+
     <aside class="sidebar">
+        <div id="status-bar" class="sys-status">SISTEM NAVIGASI: STANDBY</div>
         <div id="display">
-            <h1 class="planet-name">SOLARIS</h1>
-            <p style="color: var(--neon-blue)">Pusat Komando Astronomi</p>
-            <hr style="border: 0; border-top: 1px solid rgba(0,242,255,0.2); margin: 20px 0;">
-            <p id="description">Selamat datang, Komandan. Klik pada objek angkasa di layar kanan untuk memindai data mendalam.</p>
-        </div>
-        
-        <div class="contact-box">
-            <p><em>Kodingan di atas adalah simulasi tingkat lanjut yang dikembangkan dengan fokus pada performa visual.</em></p>
-            <button class="glow-btn" onclick="openModal()">Hubungi Developer</button>
+            <h1 class="planet-name" style="font-size: 2.2rem;">Ensiklopedia Kosmik</h1>
+            <p class="planet-type" style="color: var(--neon-blue)">Pusat Data & Eksplorasi</p>
+            
+            <div class="desc-text">
+                Selamat datang di arsip digital tingkat lanjut. Sistem ini memuat data astrofisika mendalam dari setiap objek mayor di Tata Surya kita, termasuk komposisi struktural dan sejarah observasi.
+            </div>
+            <div class="fact-box">
+                <strong>INSTRUKSI OPERASIONAL:</strong>
+                1. <strong>Klik Objek/Komet</strong> untuk memuat data komprehensif.<br>
+                2. <strong>Klik Satelit (Bulan)</strong> yang mengelilingi planet untuk mengekstrak data bulan tersebut.<br>
+                3. Gunakan fitur "Waktu" di kanan atas untuk memanipulasi rotasi orbital (Hingga 20x Warp Speed).
+            </div>
         </div>
     </aside>
 
-    <main class="viewport" id="space">
-        <div class="sun-obj" onclick="loadPlanet('sun')"></div>
-    </main>
-
-    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <span class="close-modal" onclick="closeModal()">&times;</span>
-            <h2 class="modal-title">Inisiasi Proyek</h2>
-            <p style="color: #cbd5e1; margin-bottom: 25px;">Tertarik membangun visualisasi data atau platform edukasi profesional? Mari bicarakan ide Anda.</p>
-            
-            <form>
-                <div class="form-group">
-                    <label>Nama / Organisasi</label>
-                    <input type="text" class="form-input" placeholder="Masukkan nama Anda">
-                </div>
-                <div class="form-group">
-                    <label>Pesan Singkat</label>
-                    <textarea class="form-input" rows="4" placeholder="Deskripsikan ide proyek Anda..."></textarea>
-                </div>
-                <button type="submit" class="glow-btn" style="width: 100%;">Kirim Pesan</button>
-            </form>
-            
-            <div style="margin-top: 25px; font-size: 0.8rem;">
-                Atau email langsung ke: <a href="mailto:senkuadalahilmuan@gmail.com" style="color: var(--neon-blue); text-decoration: none;">senkuadalahilmuan@gmail.com</a>
-            </div>
-        </div>
+    <div class="top-controls">
+        <button class="btn-action active" id="btnOrbits" onclick="engine.toggleOrbits()">Garis Orbit: ON</button>
+        <button class="btn-action active btn-time" id="btnTime" onclick="engine.changeTimeWarp()">Waktu: PLAY (1x)</button>
+        <button class="btn-action btn-danger" onclick="engine.resetCamera()">Panorama (Reset)</button>
     </div>
 
+    <main class="viewport" id="viewport">
+        <div class="bg-layer bg-stars-1" id="bg-stars-1"></div>
+        <div class="bg-layer bg-stars-2" id="bg-stars-2"></div>
+        <div id="universe"></div>
+    </main>
+
     <script>
-        const db = {
-            sun: { name: "Matahari", type: "Bintang (G2V)", temp: "5,505°C", grav: "274 m/s²", mass: "333,000 Bumi", age: "4.6 Miliar Thn", desc: "Matahari adalah bola plasma panas yang menghasilkan energi melalui fusi nuklir. Ia menampung 99% massa seluruh tata surya kita." },
-            mercury: { name: "Merkurius", type: "Planet Terestrial", temp: "167°C", grav: "3.7 m/s²", mass: "0.055 Bumi", age: "4.5 Miliar Thn", desc: "Planet terkecil dan terdekat dengan Matahari. Sangat ekstrem: sangat panas di siang hari dan membeku di malam hari." },
-            venus: { name: "Venus", type: "Planet Terestrial", temp: "464°C", grav: "8.87 m/s²", mass: "0.815 Bumi", age: "4.5 Miliar Thn", desc: "Planet terpanas di tata surya karena atmosfernya yang sangat tebal menjebak panas (efek rumah kaca)." },
-            earth: { name: "Bumi", type: "Planet Habitable", temp: "15°C", grav: "9.8 m/s²", mass: "5.97×10²⁴ kg", age: "4.5 Miliar Thn", desc: "Satu-satunya tempat yang diketahui memiliki kehidupan. Memiliki pelindung atmosfer yang sempurna dan air cair." },
-            mars: { name: "Mars", type: "Planet Terestrial", temp: "-65°C", grav: "3.71 m/s²", mass: "0.107 Bumi", age: "4.5 Miliar Thn", desc: "Planet Merah yang menyimpan bukti adanya air di masa lalu. Memiliki gunung berapi Olympus Mons yang sangat raksasa." },
-            jupiter: { name: "Jupiter", type: "Gas Giant", temp: "-110°C", grav: "24.79 m/s²", mass: "318 Bumi", age: "4.5 Miliar Thn", desc: "Raja para planet. Begitu besar sehingga 1.300 Bumi bisa masuk ke dalamnya. Memiliki badai abadi 'Bintik Merah Besar'." },
-            saturn: { name: "Saturnus", type: "Gas Giant", temp: "-140°C", grav: "10.44 m/s²", mass: "95 Bumi", age: "4.5 Miliar Thn", desc: "Dikenal karena sistem cincin esnya yang spektakuler. Planet ini sangat ringan, jika ada lautan cukup besar, ia akan mengapung." },
-            uranus: { name: "Uranus", type: "Ice Giant", temp: "-195°C", grav: "8.69 m/s²", mass: "14.5 Bumi", age: "4.5 Miliar Thn", desc: "Planet yang sangat dingin dan unik karena ia berputar miring (menyamping) dibandingkan planet lainnya." },
-            neptune: { name: "Neptunus", type: "Ice Giant", temp: "-201°C", grav: "11.15 m/s²", mass: "17.1 Bumi", age: "4.5 Miliar Thn", desc: "Planet biru yang sangat berangin. Angin di sini bisa mencapai kecepatan supersonik, lebih cepat dari jet tempur." },
-            pluto: { name: "Pluto", type: "Planet Katai", temp: "-225°C", grav: "0.62 m/s²", mass: "0.002 Bumi", age: "4.5 Miliar Thn", desc: "Terletak di Sabuk Kuiper. Meski kecil dan jauh, ia memiliki atmosfer tipis dan lima bulan yang setia mengitarinya." }
+        /**
+         * MASSIVE EDUCATIONAL DATABASE - EXTENDED LORE
+         */
+        const DB = {
+            // --- BINTANG & PLANET ---
+            sun: { 
+                name: "Matahari", type: "Bintang Deret Utama (Tipe G2V)", mass: "1.989 × 10³⁰ kg", temp: "5.500°C (Permukaan)", grav: "274 m/s² (28x Bumi)", day: "27 Hari Bumi", year: "230 Juta Thn (Orbit Galaksi)", atmo: "Hidrogen & Helium", 
+                desc: "Matahari adalah bola plasma bercahaya raksasa yang berada di pusat Tata Surya. Bintang ini ditenagai oleh reaksi fusi nuklir di intinya, yang mengubah hidrogen menjadi helium, melepaskan energi luar biasa dalam bentuk cahaya dan panas. Gravitasinya yang masif menyatukan seluruh tata surya kita.", 
+                struktur: "Terdiri dari inti (core) yang suhunya mencapai 15 juta °C, zona radiatif, zona konvektif, dan atmosfer yang terdiri dari fotosfer (permukaan yang kita lihat), kromosfer, dan korona (atmosfer terluar yang membentang jauh ke angkasa).",
+                sejarah: "Telah diamati sejak awal peradaban manusia dan dihormati sebagai dewa di banyak budaya kuno. Pemahaman bahwa Bumi mengelilingi Matahari (Heliosentrisme) baru diterima luas pada abad ke-16 berkat karya Nicolaus Copernicus.",
+                fact: "Angin matahari (solar wind) yang berupa aliran partikel bermuatan menabrak medan magnet Bumi, memicu fenomena indah yang kita kenal sebagai Aurora Borealis dan Australis.", 
+                missions: ["Parker Solar Probe", "SOHO", "Genesis", "Solar Orbiter"] 
+            },
+            mercury: { 
+                name: "Merkurius", type: "Planet Terestrial", mass: "0.055 Bumi", temp: "-173°C hingga 427°C", grav: "3.7 m/s²", day: "59 Hari", year: "88 Hari", atmo: "Eksosfer Sangat Tipis", 
+                desc: "Merkurius adalah planet terkecil dan terdekat dengan Matahari. Karena tidak memiliki atmosfer tebal untuk menahan panas, Merkurius mengalami fluktuasi suhu paling ekstrem di antara semua planet di tata surya.", 
+                struktur: "Memiliki kerak berbatu, mantel silikat, dan inti besi cair super besar yang mencakup sekitar 85% dari radius planet. Ukuran intinya yang tidak proporsional ini menjadi misteri besar bagi para astronom.",
+                sejarah: "Telah dikenal sejak zaman kuno (sekitar 3.000 SM) oleh bangsa Sumeria. Orbitnya yang sangat elips sempat membingungkan para ilmuwan hingga Albert Einstein menggunakan Teori Relativitas Umum untuk menjelaskannya secara presisi.",
+                fact: "Satu hari matahari penuh di Merkurius (dari matahari terbit hingga terbit lagi) memakan waktu 176 hari Bumi, yang berarti satu harinya dua kali lebih lama dari satu tahunnya!", 
+                missions: ["Mariner 10", "MESSENGER", "BepiColombo"] 
+            },
+            venus: { 
+                name: "Venus", type: "Planet Terestrial", mass: "0.815 Bumi", temp: "462°C (Rata-rata Konstan)", grav: "8.87 m/s²", day: "243 Hari (Retrograde)", year: "225 Hari", atmo: "CO2 (96%), Awan Asam Sulfat", 
+                desc: "Sering disebut 'kembaran jahat' Bumi karena ukuran dan massanya yang mirip, namun kondisinya sangat mematikan. Venus tertutup awan tebal yang memantulkan cahaya matahari (membuatnya sangat terang di langit malam), namun menjebak panas yang ekstrem.", 
+                struktur: "Sama seperti Bumi, Venus memiliki inti besi, mantel berbatu, dan kerak silikat. Namun, Venus tidak memiliki lempeng tektonik seperti Bumi, sehingga panas internalnya dilepaskan melalui letusan gunung berapi berskala global yang dahsyat.",
+                sejarah: "Satu dari lima planet yang terlihat dengan mata telanjang. Sering disebut sebagai 'Bintang Kejora' atau 'Bintang Senja'.",
+                fact: "Venus berputar mundur pada sumbunya (retrograde) dibandingkan kebanyakan planet lain. Jika kamu berdiri di Venus, matahari akan terbit dari barat dan terbenam di timur.", 
+                missions: ["Venera Program (Soviet)", "Magellan", "Akatsuki", "Pioneer Venus"] 
+            },
+            earth: { 
+                name: "Bumi", type: "Planet Laik Huni", mass: "1.0 Bumi", temp: "15°C (Rata-rata)", grav: "9.8 m/s²", day: "24 Jam", year: "365.25 Hari", atmo: "Nitrogen (78%) & Oksigen (21%)", 
+                desc: "Rumah kita, planet ketiga dari Matahari. Bumi adalah satu-satunya dunia di alam semesta yang sejauh ini dikonfirmasi menampung kehidupan organik. Bumi mengorbit di zona Goldilocks, area di mana air dapat berbentuk cair secara stabil.", 
+                struktur: "Terdiri dari Inti Dalam (besi padat), Inti Luar (besi cair yang menghasilkan medan magnet), Mantel, dan Kerak Bumi yang terpecah menjadi lempeng tektonik yang terus bergerak.",
+                sejarah: "Nama 'Earth' berasal dari bahasa Inggris kuno dan bahasa Jermanik, yang berarti tanah. Ini adalah satu-satunya planet yang tidak dinamai dari dewa mitologi Yunani atau Romawi.",
+                fact: "Medan magnet Bumi melindungi kita dari badai radiasi kosmik dan angin matahari yang mematikan. Tanpanya, atmosfer kita akan terkikis habis ke luar angkasa.", 
+                missions: ["ISS (Stasiun Luar Angkasa)", "Teleskop Hubble", "James Webb Space Telescope"] 
+            },
+            mars: { 
+                name: "Mars", type: "Planet Terestrial", mass: "0.107 Bumi", temp: "-60°C", grav: "3.71 m/s²", day: "24.6 Jam", year: "687 Hari", atmo: "Karbon Dioksida (Tipis)", 
+                desc: "Dikenal sebagai Planet Merah karena debu besi oksida (karat) yang menutupi permukaannya. Mars adalah gurun dingin berdebu, namun menyimpan jejak geologis berupa delta sungai kuno yang menunjukkan planet ini dulunya basah dan hangat.", 
+                struktur: "Memiliki inti yang terbuat dari besi, nikel, dan belerang, dikelilingi oleh mantel berbatu dan kerak tipis. Mars tidak memiliki medan magnet global aktif, yang menyebabkan hilangnya sebagian besar atmosfer masa lalunya.",
+                sejarah: "Dinamai dari dewa perang Romawi karena warnanya yang merah darah. Mars telah menjadi fokus utama eksplorasi robotik selama beberapa dekade terakhir.",
+                fact: "Mars menampung Valles Marineris (ngarai yang panjangnya membentang setara jarak ujung timur ke barat Amerika Serikat) dan Olympus Mons (gunung berapi tertinggi di tata surya, 3x lebih tinggi dari Gunung Everest).", 
+                missions: ["Curiosity Rover", "Perseverance", "Ingenuity Helicopter", "Zhurong"] 
+            },
+            jupiter: { 
+                name: "Jupiter", type: "Raksasa Gas", mass: "318 Bumi", temp: "-110°C", grav: "24.79 m/s²", day: "9.9 Jam", year: "11.8 Tahun", atmo: "Hidrogen & Helium", 
+                desc: "Planet terbesar di Tata Surya. Jika Jupiter diibaratkan sebesar bola basket, Bumi hanyalah seukuran buah anggur. Jupiter bertindak sebagai 'vacuum cleaner' kosmik, menarik asteroid dan komet dengan gravitasinya agar tidak menabrak bumi.", 
+                struktur: "Sebagai raksasa gas, Jupiter tidak memiliki permukaan padat sejati. Di bawah atmosfer tebalnya, gas berubah menjadi hidrogen metalik cair di bawah tekanan ekstrem, yang menyelimuti inti berbatu padat sebesar Bumi.",
+                sejarah: "Diamati oleh Galileo Galilei pada tahun 1610, yang juga menemukan empat bulan terbesarnya (Io, Europa, Ganymede, Callisto). Penemuan ini mengubah pandangan manusia bahwa tidak semua benda mengelilingi Bumi.",
+                fact: "Memiliki Bintik Merah Besar (Great Red Spot), sebuah badai antisiklon yang telah berputar setidaknya selama 400 tahun. Ukuran badai ini cukup besar untuk menelan planet Bumi secara utuh.", 
+                missions: ["Galileo", "Juno", "Pioneer 10", "Voyager Probes"] 
+            },
+            saturn: { 
+                name: "Saturnus", type: "Raksasa Gas", mass: "95 Bumi", temp: "-140°C", grav: "10.44 m/s²", day: "10.7 Jam", year: "29.5 Tahun", atmo: "Hidrogen & Helium", 
+                desc: "Dikenal sebagai 'Permata Tata Surya' berkat sistem cincinnya yang sangat memukau. Sistem cincin ini tidak padat, melainkan terbuat dari miliaran bongkahan es dan batu yang ukurannya bervariasi dari sebutir pasir hingga sebesar rumah.", 
+                struktur: "Sangat mirip dengan Jupiter, dengan lapisan luar gas hidrogen dan helium yang secara bertahap bertransisi menjadi cairan di kedalaman, mengelilingi inti padat kecil.",
+                sejarah: "Sistem cincinnya pertama kali diamati oleh Galileo Galilei, namun Christiaan Huygens pada 1655 yang pertama kali mengidentifikasinya sebagai cincin pipih.",
+                fact: "Saturnus adalah planet dengan massa jenis paling rendah. Ia lebih ringan dari air. Jika kamu bisa membangun bak mandi super raksasa, Saturnus akan mengapung di atas air tersebut!", 
+                missions: ["Cassini-Huygens", "Voyager 1", "Pioneer 11"] 
+            },
+            uranus: { 
+                name: "Uranus", type: "Raksasa Es", mass: "14.5 Bumi", temp: "-195°C", grav: "8.69 m/s²", day: "17.2 Jam (Retrograde)", year: "84 Tahun", atmo: "Hidrogen, Helium, Metana", 
+                desc: "Uranus memiliki warna biru-hijau yang khas akibat kehadiran gas metana di atmosfernya yang menyerap cahaya merah. Ia adalah tempat paling dingin di tata surya (bahkan lebih dingin dari Neptunus yang lebih jauh).", 
+                struktur: "Berbeda dengan Jupiter/Saturnus, sebagian besar massa Uranus terdiri dari cairan 'es' yang sangat padat dan panas—campuran air, amonia, dan metana—di atas inti berbatu kecil.",
+                sejarah: "Ditemukan oleh William Herschel pada tahun 1781. Ini adalah planet pertama yang ditemukan dengan bantuan teleskop.",
+                fact: "Uranus mengorbit dengan kemiringan sumbu 98 derajat. Akibatnya, ia berotasi secara 'menyamping' (seperti bola yang menggelinding), membuat masing-masing kutubnya mengalami musim panas/dingin ekstrem selama 42 tahun terus menerus.", 
+                missions: ["Voyager 2 (Hanya satu wahana ini yang pernah mengunjunginya pada tahun 1986)"] 
+            },
+            neptune: { 
+                name: "Neptunus", type: "Raksasa Es", mass: "17.1 Bumi", temp: "-201°C", grav: "11.15 m/s²", day: "16.1 Jam", year: "165 Tahun", atmo: "Hidrogen, Helium, Metana", 
+                desc: "Planet mayor terjauh dari Matahari. Neptunus adalah dunia yang gelap, sangat dingin, dan dilanda badai serta angin supersonik yang kecepatannya bisa mencapai 2.000 km/jam—angin tercepat di Tata Surya.", 
+                struktur: "Sama seperti Uranus, struktur internal Neptunus mayoritas berupa fluida kental es (air, amonia, metana) yang menyelimuti inti solid berbatu yang kira-kira sebesar Bumi.",
+                sejarah: "Planet pertama yang keberadaannya diprediksi murni lewat matematika, karena adanya kejanggalan pada orbit Uranus. Penemuan fisiknya dilakukan pada tahun 1846 oleh Johann Galle.",
+                fact: "Karena jaraknya yang sangat jauh, Neptunus membutuhkan waktu 165 tahun Bumi untuk menyelesaikan satu orbit. Ini berarti ia baru menyelesaikan satu 'Tahun Neptunus' pertamanya semenjak penemuannya pada tahun 2011 lalu.", 
+                missions: ["Voyager 2 (1989)"] 
+            },
+            pluto: {
+                name: "Pluto", type: "Planet Katai", mass: "0.002 Bumi", temp: "-225°C", grav: "0.62 m/s²", day: "153 Jam", year: "248 Tahun", atmo: "Nitrogen, Metana (Tipis)",
+                desc: "Dahulu merupakan planet ke-9, Pluto berada jauh di wilayah Sabuk Kuiper. Ia adalah dunia es kecil yang orbitnya sangat elips dan miring terhadap bidang orbit tata surya.",
+                struktur: "Diperkirakan memiliki inti berbatu yang menyumbang 70% dari massanya, dikelilingi oleh mantel es air, dengan permukaan es nitrogen yang membeku.",
+                sejarah: "Ditemukan oleh Clyde Tombaugh pada tahun 1930. Ia direklasifikasi menjadi 'Planet Katai' oleh IAU pada tahun 2006 karena gagal membersihkan lingkungan di sekitar orbitnya.",
+                fact: "Pluto memiliki gletser es raksasa berbentuk hati (Tombaugh Regio). Pluto juga saling terkunci secara gravitasi dengan bulan terbesarnya, Charon.",
+                missions: ["New Horizons (2015)"]
+            },
+            halley: { 
+                name: "Komet Halley", type: "Komet Periodik", mass: "Rendah", temp: "Bervariasi Ekstrem", grav: "Sangat Lemah", day: "-", year: "75.3 Tahun", atmo: "Koma Gas & Debu", 
+                desc: "Salah satu komet paling terkenal yang dapat dilihat dari Bumi setiap 75-76 tahun sekali. Inti komet terbuat dari campuran es air, metana, amonia, dan serpihan batu serta debu organik gelap.", 
+                struktur: "Komet sejatinya adalah 'bola salju kotor'. Saat mendekati Matahari, radiasi memanaskan permukaannya, menyebabkan es menyublim langsung menjadi gas, menciptakan atmosfer bercahaya (koma) dan dua ekor terpisah (ekor ion dan ekor debu).",
+                sejarah: "Dinamai dari astronom Inggris Edmond Halley yang pertama kali menyadari bahwa komet-komet yang muncul pada tahun 1531, 1607, dan 1682 sebenarnya adalah benda langit yang sama, dan dengan tepat memprediksi kembalinya pada tahun 1758.",
+                fact: "Ekor komet tidak menunjuk ke arah belakang lintasan gerak komet, melainkan selalu terdorong menjauhi Matahari akibat tekanan angin surya (solar wind).", 
+                missions: ["Giotto Probe (ESA)", "Vega 1 & 2 (Soviet)", "Suisei (Jepang)"] 
+            },
+
+            // --- SATELIT (BULAN) EKSKLUSIF ---
+            luna: { 
+                name: "Bulan (Luna)", type: "Satelit Alam Bumi", mass: "1.2% Bumi", temp: "-173°C / 127°C", grav: "1.62 m/s²", day: "27.3 Hari", year: "27.3 Hari", atmo: "Eksosfer Sangat Tipis", 
+                desc: "Benda langit paling terang di langit malam kita. Permukaan Bulan dipenuhi dengan kawah dampak akibat miliaran tahun hujan meteor, serta 'maria' (dataran basal gelap hasil aktivitas vulkanik purba).", 
+                struktur: "Bulan memiliki kerak berbatu yang tebal, mantel keras, dan inti kaya besi yang sebagian cair di pusatnya. Gempa bulan (moonquakes) dangkal sering terjadi akibat kontraksi saat bulan mendingin.",
+                sejarah: "Bulan terbentuk sekitar 4.5 miliar tahun yang lalu, diyakini akibat tabrakan benda raksasa seukuran Mars (Theia) dengan Bumi muda.",
+                fact: "Bulan mengalami 'Tidal Locking' (Terkunci Pasang Surut). Waktu rotasi bulan pada sumbunya sama persis dengan waktu orbitnya mengelilingi Bumi, sehingga ia selalu menunjukkan sisi wajah yang sama kepada kita.", 
+                missions: ["Apollo 11 (Pendaratan Manusia Pertama)", "Artemis Program", "Chang'e Missions"] 
+            },
+            phobos: {
+                name: "Phobos", type: "Satelit Mars", mass: "Sangat Kecil", temp: "-40°C", grav: "0.005 m/s²", day: "7 Jam 39 Mnt", year: "7 Jam 39 Mnt", atmo: "Tidak Ada",
+                desc: "Satelit terbesar Mars yang bentuknya sangat tidak beraturan, menyerupai bongkahan kentang penuh kawah raksasa. Kawah terbesarnya, Stickney, hampir selebar bulan itu sendiri.",
+                struktur: "Tersusun dari batuan karbon yang sangat gelap (C-type asteroid). Densitasnya sangat rendah, menunjukkan bahwa interiornya mungkin keropos (seperti tumpukan puing-puing berongga).",
+                sejarah: "Ditemukan pada 1877 oleh Asaph Hall. Nama Phobos diambil dari dewa ketakutan dalam mitologi Yunani.",
+                fact: "Orbit Phobos sangat dekat dengan Mars, jaraknya hanya sekitar 6.000 km dari permukaan. Gravitasi Mars secara perlahan menarik Phobos, dan bulan ini diperkirakan akan hancur menjadi cincin dalam 50 juta tahun mendatang.",
+                missions: ["Phobos Program (Soviet - Gagal)", "Mars Reconnaissance Orbiter (Observasi)"]
+            },
+            ganymede: {
+                name: "Ganymede", type: "Satelit Jupiter", mass: "2x Bulan Bumi", temp: "-163°C", grav: "1.42 m/s²", day: "7 Hari Bumi", year: "7 Hari Bumi", atmo: "Oksigen (Sangat Tipis)",
+                desc: "Ganymede adalah satelit alami terbesar di seluruh Tata Surya. Secara volume, ia bahkan lebih besar dari planet Merkurius dan planet katai Pluto. Jika ia mengorbit Matahari secara langsung, ia akan diklasifikasikan sebagai planet.",
+                struktur: "Terdiri dari tiga lapisan utama: inti besi metalik cair di pusat, mantel berbentuk cangkang batu silikat, dan lapisan terluar berupa kerak es yang tebal. Di bawah es, diduga terdapat samudra air asin raksasa.",
+                sejarah: "Ditemukan oleh Galileo Galilei pada Januari 1610 bersama dengan tiga satelit Galilean lainnya (Io, Europa, Callisto).",
+                fact: "Satu-satunya bulan di tata surya yang dikonfirmasi memiliki medan magnet globalnya sendiri, yang diyakini dihasilkan dari efek dinamo inti besi cairnya.",
+                missions: ["Galileo", "Juno", "JUICE (Jupiter Icy Moons Explorer - Sedang menuju ke sana)"]
+            },
+            europa: { 
+                name: "Europa", type: "Satelit Jupiter", mass: "0.8x Bulan", temp: "-160°C", grav: "1.31 m/s²", day: "3.5 Hari", year: "3.5 Hari", atmo: "Oksigen (Eksosfer)", 
+                desc: "Dunia yang tertutup es padat yang penuh dengan retakan memanjang dan berwarna coklat kemerahan. Es permukaannya sangat mulus dan terus diperbarui, menjadikannya benda dengan permukaan paling rata di tata surya.", 
+                struktur: "Di bawah kerak es Europa (yang tebalnya sekitar 15-25 km), terdapat lautan air berwujud cair (saltwater ocean) global yang kedalamannya bisa mencapai 100 km. Volume air ini diperkirakan 2 kali lipat dari seluruh volume air lautan di Bumi.",
+                sejarah: "Juga ditemukan oleh Galileo pada 1610. Pemetaan detail pertama dilakukan oleh wahana antariksa Voyager pada 1979.",
+                fact: "Karena keberadaan lautan air asin cair, mantel berbatu, dan panas dari pasang-surut Jupiter, Europa menjadi kandidat utama tempat paling menjanjikan untuk mencari tanda-tanda kehidupan alien (biologi mikroskopis).", 
+                missions: ["Galileo", "Europa Clipper (NASA - Peluncuran Mendatang)"] 
+            },
+            titan: {
+                name: "Titan", type: "Satelit Saturnus", mass: "1.8x Bulan", temp: "-179°C", grav: "1.35 m/s²", day: "16 Hari", year: "16 Hari", atmo: "Nitrogen (95%), Metana",
+                desc: "Bulan terbesar Saturnus dan dunia yang sangat misterius. Titan diselimuti oleh kabut oranye pekat yang menyembunyikan permukaannya. Ia adalah satu-satunya bulan di tata surya yang memiliki atmosfer masif dan tebal.",
+                struktur: "Permukaan Titan terbuat dari es air padat sekeras batu. Yang luar biasa, ia memiliki siklus cairan mirip dengan siklus hidrologi Bumi, tetapi cairan tersebut bukanlah air, melainkan metana dan etana cair yang membentuk hujan, sungai, dan danau.",
+                sejarah: "Ditemukan pada 1655 oleh astronom Belanda Christiaan Huygens.",
+                fact: "Wahana Huygens berhasil mendarat di permukaan Titan pada 2005, mengirimkan foto pertama lanskap alien berbatu es bundar yang terkikis oleh sungai hidrokarbon.",
+                missions: ["Cassini (Orbiter)", "Huygens (Lander)", "Dragonfly (Misi Drone Mendatang)"]
+            },
+            enceladus: {
+                name: "Enceladus", type: "Satelit Saturnus", mass: "Sangat Kecil", temp: "-201°C", grav: "0.11 m/s²", day: "1.3 Hari", year: "1.3 Hari", atmo: "Uap Air (Lokal di Kutub)",
+                desc: "Dunia es putih bersih dan terang bercahaya yang memantulkan hampir 100% sinar matahari. Meskipun ukurannya sangat kecil, ia adalah objek paling aktif secara geologis di sistem Saturnus.",
+                struktur: "Memiliki lautan air panas global tersembunyi di bawah keraknya. Dari celah-celah patahan di kutub selatannya yang disebut 'Belang Harimau' (Tiger Stripes), ia menyemburkan geyser raksasa berisi air, garam, dan material organik pekat jauh ke luar angkasa.",
+                sejarah: "Ditemukan pada tahun 1789 oleh William Herschel.",
+                fact: "Geyser uap air yang disemburkan oleh Enceladus dengan kecepatan 1.400 km/jam inilah yang memasok material untuk membentuk salah satu cincin terluar Saturnus (Cincin E).",
+                missions: ["Cassini-Huygens (Melakukan terbang lintas menembus geyser)"]
+            },
+            charon: {
+                name: "Charon", type: "Satelit Pluto", mass: "12% Pluto", temp: "-220°C", grav: "0.28 m/s²", day: "6.4 Hari", year: "6.4 Hari", atmo: "Tidak Ada",
+                desc: "Bulan terbesar Pluto. Ukuran Charon sangat proporsional dengan Pluto (sekitar setengah diameternya), membuat mereka dijuluki sebagai sistem 'planet katai ganda'.",
+                struktur: "Terdiri dari setengah campuran batu dan setengah es air. Kutub utaranya diselimuti oleh material merah gelap misterius yang dijuluki 'Mordor Macula', yang diduga merupakan sisa gas metana dari Pluto.",
+                sejarah: "Ditemukan pada 1978 oleh astronom James Christy yang menyadari adanya benjolan asimetris pada foto teleskopik Pluto.",
+                fact: "Pluto dan Charon selalu saling bertatapan (Double-Tidal Locking). Jika kamu berdiri di Pluto, Charon akan tampak diam melayang di satu titik langit yang sama selamanya.",
+                missions: ["New Horizons (Terbang Lintas pada 2015)"]
+            }
         };
 
-        const planets = [
-            { id: 'mercury', dist: 140, size: 12, speed: 6, color: '#9ca3af' },
-            { id: 'venus', dist: 190, size: 18, speed: 10, color: '#fbbf24' },
-            { id: 'earth', dist: 250, size: 22, speed: 15, color: '#3b82f6' },
-            { id: 'mars', dist: 310, size: 16, speed: 20, color: '#ef4444' },
-            { id: 'jupiter', dist: 400, size: 40, speed: 35, color: '#d97706' },
-            { id: 'saturn', dist: 510, size: 35, speed: 45, color: '#fcd34d' },
-            { id: 'uranus', dist: 600, size: 26, speed: 55, color: '#7dd3fc' },
-            { id: 'neptune', dist: 680, size: 26, speed: 65, color: '#1d4ed8' },
-            { id: 'pluto', dist: 750, size: 10, speed: 80, color: '#94a3b8' }
+        const CELESTIAL_DATA = [
+            { id: 'sun', isCenter: true, size: 90, img: 'https://upload.wikimedia.org/wikipedia/commons/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg' },
+            { id: 'mercury', dist: 120, size: 10, speed: 0.04, img: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Mercury_in_true_color.jpg' },
+            { id: 'venus', dist: 180, size: 18, speed: 0.025, img: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Venus_from_Mariner_10.jpg' },
+            { id: 'earth', dist: 250, size: 20, speed: 0.015, img: 'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg', 
+              moons: [{ id: 'luna', size: 5, dist: 35, speed: 0.05, img: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg' }] },
+            { id: 'mars', dist: 330, size: 16, speed: 0.01, img: 'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg',
+              moons: [{ id: 'phobos', size: 4, dist: 25, speed: 0.08, bg: '#555' }] },
+            { id: 'jupiter', dist: 550, size: 45, speed: 0.005, img: 'https://upload.wikimedia.org/wikipedia/commons/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg', 
+              moons: [
+                  { id: 'europa', size: 4, dist: 65, speed: 0.04, bg: '#e2e8f0' },
+                  { id: 'ganymede', size: 6, dist: 85, speed: 0.03, bg: '#94a3b8' }
+              ] },
+            { id: 'saturn', dist: 750, size: 38, speed: 0.003, img: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg', hasRings: true,
+              moons: [
+                  { id: 'titan', size: 6, dist: 75, speed: 0.03, bg: '#d97706' },
+                  { id: 'enceladus', size: 3, dist: 95, speed: 0.02, bg: '#fff' }
+              ] },
+            { id: 'uranus', dist: 950, size: 28, speed: 0.002, img: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg' },
+            { id: 'neptune', dist: 1100, size: 28, speed: 0.0015, img: 'https://upload.wikimedia.org/wikipedia/commons/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg' },
+            { id: 'pluto', dist: 1250, size: 10, speed: 0.001, img: 'https://upload.wikimedia.org/wikipedia/commons/a/a6/Pluto-transparent.png',
+              moons: [{ id: 'charon', size: 5, dist: 25, speed: 0.04, bg: '#94a3b8' }]},
+            // KOMET
+            { id: 'halley', isComet: true, a: 800, b: 350, offset: 400, speed: 0.007, size: 8 }
         ];
 
-        function init() {
-            const space = document.getElementById('space');
-            planets.forEach(p => {
-                const orbit = document.createElement('div');
-                orbit.className = 'orbit';
-                orbit.style.width = p.dist + 'px';
-                orbit.style.height = p.dist + 'px';
-                orbit.style.animationDuration = p.speed + 's';
-                const planet = document.createElement('div');
-                planet.className = 'planet-clickable';
-                planet.style.width = p.size + 'px';
-                planet.style.height = p.size + 'px';
-                planet.style.backgroundColor = p.color;
-                planet.onclick = (e) => { e.stopPropagation(); loadPlanet(p.id); };
-                orbit.appendChild(planet);
-                space.appendChild(orbit);
-            });
-            for(let i=0; i<150; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                star.style.width = Math.random() * 2 + 'px';
-                star.style.height = star.style.width;
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                star.style.animationDelay = Math.random() * 3 + 's';
-                document.body.appendChild(star);
+        class CelestialBody {
+            constructor(data, parentBody = null) {
+                this.data = data;
+                this.id = data.id || 'unknown';
+                this.name = DB[this.id] ? DB[this.id].name : 'Objek';
+                this.dist = data.dist || 0;
+                this.size = data.size;
+                this.baseSpeed = data.speed || 0;
+                this.angle = Math.random() * Math.PI * 2;
+                this.parent = parentBody; 
+                this.x = 0; this.y = 0;
+                this.moons = [];
+                this.element = this.createDOM(data);
+                
+                if (data.moons) {
+                    data.moons.forEach(mData => this.moons.push(new CelestialBody(mData, this)));
+                }
+            }
+
+            createDOM(data) {
+                const universe = document.getElementById('universe');
+                
+                if (this.dist > 0 || data.isComet) {
+                    this.orbitEl = document.createElement('div');
+                    this.orbitEl.className = `orbit-ring orbit-sys ${this.parent ? 'moon-orbit' : ''} ${data.isComet ? 'comet-orbit' : ''}`;
+                    this.orbitEl.id = `ring-${this.id}`;
+                    
+                    if (data.isComet) {
+                        this.orbitEl.style.width = `${data.a * 2}px`;
+                        this.orbitEl.style.height = `${data.b * 2}px`;
+                        this.orbitEl.style.transform = `translate(calc(-50% - ${data.offset}px), -50%)`;
+                    } else {
+                        this.orbitEl.style.width = `${this.dist * 2}px`;
+                        this.orbitEl.style.height = `${this.dist * 2}px`;
+                    }
+                    universe.appendChild(this.orbitEl);
+                }
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'body-wrapper';
+                wrapper.id = `wrapper-${this.id}`;
+                
+                wrapper.onclick = (e) => {
+                    e.stopPropagation();
+                    engine.setTarget(this);
+                };
+
+                const label = document.createElement('div');
+                label.className = 'obj-label';
+                label.innerText = this.name;
+                wrapper.appendChild(label);
+
+                this.visualEl = document.createElement('div');
+                this.visualEl.className = 'body-visual';
+                if(data.isCenter) this.visualEl.classList.add('sun-visual');
+                if(data.hasRings) this.visualEl.classList.add('rings');
+                if(data.isComet) this.visualEl.classList.add('comet');
+                
+                this.visualEl.style.width = `${this.size}px`;
+                this.visualEl.style.height = `${this.size}px`;
+                
+                if(data.img) this.visualEl.style.backgroundImage = `url('${data.img}')`;
+                else if (data.bg) this.visualEl.style.backgroundColor = data.bg; 
+                else if (!data.isComet) this.visualEl.style.backgroundColor = '#e2e8f0';
+
+                wrapper.appendChild(this.visualEl);
+                universe.appendChild(wrapper);
+                
+                return wrapper;
+            }
+
+            update(timeScale) {
+                if (this.baseSpeed > 0) this.angle += this.baseSpeed * timeScale;
+
+                let centerX = this.parent ? this.parent.x : 0;
+                let centerY = this.parent ? this.parent.y : 0;
+
+                if (this.data.isComet) {
+                    this.x = Math.cos(this.angle) * this.data.a - this.data.offset;
+                    this.y = Math.sin(this.angle) * this.data.b;
+                    const tailAngle = Math.atan2(this.y, this.x + this.data.offset) * 180 / Math.PI;
+                    this.visualEl.style.transform = `rotate(${tailAngle}deg)`;
+                } else {
+                    this.x = centerX + Math.cos(this.angle) * this.dist;
+                    this.y = centerY + Math.sin(this.angle) * this.dist;
+                }
+
+                this.element.style.transform = `translate(calc(-50% + ${this.x}px), calc(-50% + ${this.y}px))`;
+                
+                if(this.orbitEl && !this.data.isComet) {
+                    this.orbitEl.style.transform = `translate(calc(-50% + ${centerX}px), calc(-50% + ${centerY}px))`;
+                }
+
+                this.moons.forEach(moon => moon.update(timeScale));
             }
         }
 
-        function loadPlanet(id) {
-            const data = db[id];
-            const display = document.getElementById('display');
-            display.style.opacity = 0;
-            display.style.transform = "translateX(-20px)";
-            setTimeout(() => {
-                display.innerHTML = `
-                    <h1 class="planet-name">${data.name}</h1>
-                    <p style="color: var(--neon-blue); font-weight: bold;">${data.type}</p>
-                    <div class="data-grid">
-                        <div class="data-card"><div class="label">Suhu</div><div class="value">${data.temp}</div></div>
-                        <div class="data-card"><div class="label">Gravitasi</div><div class="value">${data.grav}</div></div>
-                        <div class="data-card"><div class="label">Massa</div><div class="value">${data.mass}</div></div>
-                        <div class="data-card"><div class="label">Usia</div><div class="value">${data.age}</div></div>
-                    </div>
-                    <h3 style="border-bottom: 1px solid var(--neon-blue); padding-bottom: 5px;">Data Analisis</h3>
-                    <p style="line-height: 1.7; font-size: 0.95rem;">${data.desc}</p>
+        class CosmicEngine {
+            constructor() {
+                this.bodies = [];
+                this.asteroids = [];
+                
+                this.timeSpeeds = [0, 1, 5, 20];
+                this.timeLabels = ['PAUSED', 'PLAY (1x)', 'FAST (5x)', 'WARP (20x)'];
+                this.timeIndex = 1;
+                this.timeScale = this.timeSpeeds[this.timeIndex];
+                
+                this.showOrbits = true;
+                this.cameraX = 0; this.cameraY = 0; this.zoomScale = 1;
+                this.target = null;
+                
+                this.universeEl = document.getElementById('universe');
+                this.bg1 = document.getElementById('bg-stars-1');
+                this.bg2 = document.getElementById('bg-stars-2');
+                
+                this.initSimulation();
+                this.loop();
+                this.setupDragPan();
+            }
+
+            initSimulation() {
+                CELESTIAL_DATA.forEach(data => this.bodies.push(new CelestialBody(data)));
+                
+                for(let i=0; i<300; i++) {
+                    const dist = 420 + (Math.random() * 60);
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 0.005 + (Math.random() * 0.003);
+                    const size = Math.random() * 1.5 + 0.5;
+                    
+                    const el = document.createElement('div');
+                    el.className = 'asteroid';
+                    el.style.width = `${size}px`; el.style.height = `${size}px`;
+                    el.style.opacity = Math.random() * 0.5 + 0.1;
+                    this.universeEl.appendChild(el);
+                    this.asteroids.push({ el, dist, angle, speed, x:0, y:0 });
+                }
+            }
+
+            setTarget(body) {
+                this.target = body;
+                document.getElementById('status-bar').innerText = `TARGET TERKUNCI: ${body.name.toUpperCase()}`;
+                document.getElementById('status-bar').classList.remove('alert');
+                
+                document.querySelectorAll('.orbit-ring').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.body-wrapper').forEach(el => el.classList.remove('tracked'));
+                
+                if (body.id !== 'sun') {
+                    const ring = document.getElementById(`ring-${body.id}`);
+                    if(ring) ring.classList.add('active');
+                }
+                body.element.classList.add('tracked');
+
+                const data = DB[body.id];
+                if(data) {
+                    let missionsHTML = '';
+                    if (data.missions && data.missions.length > 0) {
+                        const badges = data.missions.map(m => `<span class="mission-badge">${m}</span>`).join('');
+                        missionsHTML = `<div class="mission-box"><strong>Jejak Misi Manusia:</strong>${badges}</div>`;
+                    }
+
+                    document.getElementById('display').innerHTML = `
+                        <h1 class="planet-name">${data.name}</h1>
+                        <p class="planet-type">${data.type}</p>
+                        
+                        <div class="data-grid">
+                            <div class="data-card"><div class="label">Massa</div><div class="value">${data.mass}</div></div>
+                            <div class="data-card"><div class="label">Suhu Area</div><div class="value">${data.temp}</div></div>
+                            <div class="data-card"><div class="label">Lama 1 Hari</div><div class="value">${data.day}</div></div>
+                            <div class="data-card"><div class="label">Lama 1 Tahun</div><div class="value">${data.year}</div></div>
+                            
+                            <div class="data-card full-width"><div class="label">Gravitasi</div><div class="value">${data.grav}</div></div>
+                            <div class="data-card full-width"><div class="label">Atmosfer</div><div class="value">${data.atmo}</div></div>
+                        </div>
+                        
+                        <div class="info-section">
+                            <h3>Deskripsi Umum</h3>
+                            <div class="desc-text">${data.desc}</div>
+                        </div>
+                        
+                        <div class="info-section">
+                            <h3>Struktur Internal & Permukaan</h3>
+                            <div class="desc-text">${data.struktur}</div>
+                        </div>
+                        
+                        <div class="info-section">
+                            <h3>Sejarah & Observasi</h3>
+                            <div class="desc-text">${data.sejarah}</div>
+                        </div>
+                        
+                        <div class="fact-box">
+                            <strong>FAKTA MENARIK:</strong>
+                            ${data.fact}
+                        </div>
+                        
+                        ${missionsHTML}
+                    `;
+                }
+            }
+
+            resetCamera() {
+                this.target = null;
+                document.getElementById('status-bar').innerText = 'SISTEM NAVIGASI: MANUAL';
+                document.getElementById('status-bar').classList.add('alert');
+                document.querySelectorAll('.orbit-ring').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.body-wrapper').forEach(el => el.classList.remove('tracked'));
+                
+                document.getElementById('display').innerHTML = `
+                    <h1 class="planet-name" style="font-size: 2.2rem;">Ensiklopedia Kosmik</h1>
+                    <p class="planet-type" style="color: var(--neon-blue)">Target Dilepaskan</p>
+                    <div class="desc-text">Kamera dikembalikan ke mode pemantauan luas. Anda dapat mendrag/menggeser layar secara manual untuk menjelajah Tata Surya.</div>
                 `;
-                display.style.opacity = 1;
-                display.style.transform = "translateX(0)";
-            }, 300);
-        }
-
-        // Fungsi JavaScript untuk Modal
-        const overlay = document.getElementById('modalOverlay');
-
-        function openModal() {
-            overlay.classList.add('open');
-        }
-
-        function closeModal() {
-            overlay.classList.remove('open');
-        }
-
-        // Menutup modal jika ESC ditekan
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && overlay.classList.contains('open')) {
-                closeModal();
             }
-        });
 
-        init();
+            changeTimeWarp() {
+                this.timeIndex = (this.timeIndex + 1) % this.timeSpeeds.length;
+                this.timeScale = this.timeSpeeds[this.timeIndex];
+                
+                const btn = document.getElementById('btnTime');
+                btn.innerText = `Waktu: ${this.timeLabels[this.timeIndex]}`;
+                
+                if (this.timeScale === 0) btn.classList.remove('active');
+                else btn.classList.add('active');
+
+                if (this.timeScale >= 20) btn.classList.add('warp');
+                else btn.classList.remove('warp');
+            }
+
+            toggleOrbits() {
+                this.showOrbits = !this.showOrbits;
+                const btn = document.getElementById('btnOrbits');
+                const rings = document.querySelectorAll('.orbit-sys');
+                if (this.showOrbits) { btn.innerText = 'Garis Orbit: ON'; btn.classList.add('active'); rings.forEach(r => r.classList.remove('hidden')); } 
+                else { btn.innerText = 'Garis Orbit: OFF'; btn.classList.remove('active'); rings.forEach(r => r.classList.add('hidden')); }
+            }
+
+            setupDragPan() {
+                let isDragging = false;
+                let startX, startY;
+                const viewport = document.getElementById('viewport');
+
+                viewport.addEventListener('mousedown', (e) => {
+                    if(e.target.closest('.body-wrapper') || e.target.closest('.top-controls')) return;
+                    isDragging = true; startX = e.clientX; startY = e.clientY; this.target = null; 
+                });
+
+                window.addEventListener('mouseup', () => isDragging = false);
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging || this.target) return;
+                    const dx = e.clientX - startX; const dy = e.clientY - startY;
+                    this.cameraX += dx / this.zoomScale; this.cameraY += dy / this.zoomScale;
+                    startX = e.clientX; startY = e.clientY;
+                });
+            }
+
+            lerp(start, end, factor) { return start + (end - start) * factor; }
+
+            loop() {
+                this.bodies.forEach(body => body.update(this.timeScale));
+                
+                this.asteroids.forEach(ast => {
+                    if (this.timeScale > 0) ast.angle += ast.speed * this.timeScale;
+                    ast.x = Math.cos(ast.angle) * ast.dist; ast.y = Math.sin(ast.angle) * ast.dist;
+                    ast.el.style.transform = `translate(calc(-50% + ${ast.x}px), calc(-50% + ${ast.y}px))`;
+                });
+
+                let targetX = this.cameraX, targetY = this.cameraY, targetZoom = this.zoomScale;
+
+                if (this.target) {
+                    targetX = -this.target.x + 150; 
+                    targetY = -this.target.y;
+                    targetZoom = this.target.parent ? 4.5 : (this.target.id === 'sun' ? 1.0 : (this.target.size < 20 ? 3.0 : 2.0));
+                } else if (this.zoomScale < 0.5) {
+                    targetX = 150; targetY = 0;
+                    targetZoom = (window.innerHeight / 2800); 
+                }
+
+                this.cameraX = this.lerp(this.cameraX, targetX, 0.05);
+                this.cameraY = this.lerp(this.cameraY, targetY, 0.05);
+                this.zoomScale = this.lerp(this.zoomScale, targetZoom, 0.05);
+
+                this.universeEl.style.transform = `scale(${this.zoomScale}) translate(${this.cameraX}px, ${this.cameraY}px)`;
+                this.bg1.style.backgroundPosition = `${this.cameraX * 0.05}px ${this.cameraY * 0.05}px`;
+                this.bg2.style.backgroundPosition = `${this.cameraX * 0.1}px ${this.cameraY * 0.1}px`;
+
+                requestAnimationFrame(() => this.loop());
+            }
+        }
+
+        window.onload = () => { window.engine = new CosmicEngine(); };
     </script>
 </body>
 </html>
